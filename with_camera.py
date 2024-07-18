@@ -9,6 +9,7 @@ from pathfinding.core.grid import Grid
 from pathfinding.finder.a_star import AStarFinder
 import time
 import pickle
+#from gait_logic.quadruped import Quadruped
 
 def load_camera_parameters(camera_matrix_path, distortion_coefficients_path):
     """ Load camera matrix and distortion coefficients from files. """
@@ -60,6 +61,30 @@ def calculate_3d_points(disparity_map, Q):
     points_3d = cv2.reprojectImageTo3D(disparity_map, Q)
     return points_3d
 
+def check_movement_direction(points_3d):
+    """ Check the first 50 values of the x, y, z axes and determine movement direction """
+    first_50_points = points_3d[:50]
+
+    x_values = first_50_points[:, 0]
+    y_values = first_50_points[:, 1]
+    z_values = first_50_points[:, 2]
+
+    if np.all(np.diff(x_values) > 0):
+        x_direction = "Move Right"
+    elif np.all(np.diff(x_values) < 0):
+        x_direction = "Move Left"
+    else:
+        x_direction = "No clear direction in X"
+
+    if np.all(np.diff(z_values) > 0):
+        z_direction = "Move Forward"
+    elif np.all(np.diff(z_values) < 0):
+        z_direction = "Move Backward"
+    else:
+        z_direction = "No clear direction in Z"
+
+    return x_direction, z_direction
+
 # Load calibration data from a .pkl file
 with open(r"images\calibration_results\calibration_data.pkl", "rb") as f:
     calibration_data = pickle.load(f)
@@ -93,10 +118,10 @@ def rectify_stereo_images(left_img, right_img):
     return left_img_rectified, right_img_rectified
 
 # Set the camera index
-camera_index = 1
+camera_index = 0
 
-# Desired preview resolution (try a lower resolution if necessary)
-preview_width = 2560
+# Desired preview resolution
+preview_width = 1280
 preview_height = 720
 
 # Open the camera
@@ -125,6 +150,8 @@ else:
 
 # Display live video stream
 while True:
+    start_time = time.time()  # Start timer
+
     # Capture frame-by-frame
     ret, frame = cap.read()
 
@@ -142,10 +169,6 @@ while True:
         # Rectify stereo images
         left_image_rectified, right_image_rectified = rectify_stereo_images(left_image_gray, right_image_gray)
 
-        # Display rectified images
-        # cv2.imshow('Rectified Left Image', left_image_rectified)
-        # cv2.imshow('Rectified Right Image', right_image_rectified)
-        
         # Hardcoded paths to the camera parameters
         camera_matrix_path = r"images\calibration_results\CmL.txt"
         distortion_coefficients_path = r"images\calibration_results\DcL.txt"
@@ -157,10 +180,10 @@ while True:
         disparity_image = depth_map(left_image_gray, right_image_gray)
 
         # Q matrix (reprojection matrix) using your calibration parameters
-        Q = np.array([[1.0, 0.0, 0.0, -646.38246918],
-                      [0.0, 1.0, 0.0, -252.22726822],
-                      [0.0, 0.0, 0.0, 994.95161541],
-                      [0.0, 0.0, 0.300325055, 0.0]])
+        Q = np.array([[1.0, 0.0, 0.0, -776.937],
+                      [0.0, 1.0, 0.0, -263.837],
+                      [0.0, 0.0, 0.0, 1866.196],
+                      [0.0, 0.0, 0.314, 0.0]])
 
         # Calculate 3D points
         points3d = calculate_3d_points(disparity_image, Q)
@@ -187,7 +210,7 @@ while True:
         far_zx = (zz.shape[1]-91) - far_zx
         far_zy = occupancy_grid.shape[0] - far_zy - 1
 
-        xcenter = 800
+        xcenter = 640
 
         ''' A* path-finding config and computation '''
         mat_grid = Grid(matrix=occupancy_grid)
@@ -202,7 +225,8 @@ while True:
         if len(path) == 0:
             print('ERROR: No path found')
 
-        ''' Map X,Y pixel positions to world-frame for cv.projectPoints() '''
+        # Commented out the path displaying code
+        
         coords = np.array([(xp, zp) for xp, zp in path], dtype=np.int32)
 
         yrange = np.geomspace(yy.shape[0]-1, yfloor+1, num=len(path), dtype=np.int32)
@@ -215,19 +239,20 @@ while True:
 
         cf = np.array([xworld, yworld, zworld]).T
 
-        ''' Reproject 3D world-frame points back to unrectified 2D points'''
+        
+        x_direction  , z_direction = check_movement_direction(cf)
+        print(f"X Direction: {x_direction}, Z Direction: {z_direction}")
+        
         pr, _ = cv2.projectPoints(cf, np.zeros(3), np.zeros(3), CL, DL)
         pr = np.squeeze(pr, 1)
         py = pr[:,1]
         px = pr[:,0]
 
-        ''' Draw Floor Polygon '''
         fPts = np.array([[-40, 13, nDisp], [40, 13, nDisp], [40, 15, 0], [-40, 15, 0]], dtype=np.float32).T
         # fPts order: (top left, top right, bottom right, bottom left)
         pf, _ = cv2.projectPoints(fPts, np.zeros(3).T, np.zeros(3), CL, None)
         pf = np.squeeze(pf, 1)
 
-        ''' Update figure (final results) '''
         plt.clf()
 
         pathStats = 'steps={}\npathlen={}'.format(runs, len(path))
@@ -254,6 +279,10 @@ while True:
         plt.plot(coords[:,0], coords[:,1], 'r')     # Plot A* path over occupancy grid
 
         plt.show()
+        
+
+        end_time = time.time()  # End timer
+        print(f"Frame processing time: {end_time - start_time} seconds")
 
         # Wait for 1 millisecond for a key press; exit loop if 'q' is pressed
         if cv2.waitKey(1) & 0xFF == ord('q'):

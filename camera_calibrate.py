@@ -23,8 +23,8 @@ class StereoCalibration(object):
         self.read_images(self.cal_path)
 
     def read_images(self, cal_path):
-        images_right = glob.glob(os.path.join(cal_path, 'right', '*.JPG'))
-        images_left = glob.glob(os.path.join(cal_path, 'left', '*.JPG'))
+        images_right = glob.glob(os.path.join(cal_path, 'right', '*.png'))
+        images_left = glob.glob(os.path.join(cal_path, 'left', '*.png'))
         images_left.sort()
         images_right.sort()
 
@@ -109,7 +109,7 @@ class StereoCalibration(object):
             criteria=stereocalib_criteria, flags=flags)
 
         # Calculate rectification parameters
-        R1, R2, P1, P2, Q, _, _ = cv2.stereoRectify(M1, d1, M2, d2, dims, R, T)
+        R1, R2, P1, P2, Q, validROIL, validROIR = cv2.stereoRectify(M1, d1, M2, d2, dims, R, T)
 
         print('Intrinsic_mtx_1', M1)
         print('dist_1', d1)
@@ -129,11 +129,8 @@ class StereoCalibration(object):
         # Compute undistortion and rectification transformation maps
         undistL, rectifL = cv2.initUndistortRectifyMap(M1, d1, R1, P1, dims, cv2.CV_32FC1)
         undistR, rectifR = cv2.initUndistortRectifyMap(M2, d2, R2, P2, dims, cv2.CV_32FC1)
-
-        # Determine valid regions of interest
-        validROIL, validROIR = cv2.getValidDisparityROI(
-            (0, 0, dims[0], dims[1]), (0, 0, dims[0], dims[1]), 0, 16, 3
-        )
+        
+        
 
         camera_model = dict([('M1', M1), ('M2', M2), ('dist1', d1),
                         ('dist2', d2), ('rvecs1', self.r1),
@@ -167,9 +164,10 @@ class StereoCalibration(object):
         cv2.destroyAllWindows()
         return camera_model
 
+
 if __name__ == '__main__':
     # Specify the path to the folder containing the images
-    filepath = r'C:\Users\PMLS\Downloads\stereo_calibration-master\stereo_calibration-master\images'
+    filepath = r'images copy'
     
     # Create a directory for the calibration results if it doesn't exist
     if not os.path.exists(os.path.join(filepath, 'calibration_results')):

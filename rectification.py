@@ -2,6 +2,7 @@ import pickle
 import cv2
 import numpy as np
 import os
+import matplotlib.pyplot as plt
 
 # Load calibration data from a .pkl file
 with open(r"images\calibration_results\calibration_data.pkl", "rb") as f:
@@ -16,8 +17,8 @@ R = np.array(calibration_data["R"])  # Rotation matrix
 T = np.array(calibration_data["T"])  # Translation vector
 
 # Load stereo images
-left_img = cv2.imread(r"Dataset1\left\left_12.png", cv2.IMREAD_GRAYSCALE)
-right_img = cv2.imread(r"Dataset1\right\right_12.png", cv2.IMREAD_GRAYSCALE)
+left_img = cv2.imread(r"left_image_1719902890.png", cv2.IMREAD_GRAYSCALE)
+right_img = cv2.imread(r"right_image_1719902890.png", cv2.IMREAD_GRAYSCALE)
 
 # Image size
 image_size = left_img.shape[::-1]
@@ -40,11 +41,41 @@ output_dir = r"rectified_images"
 os.makedirs(output_dir, exist_ok=True)
 
 # Save rectified images
-cv2.imwrite(os.path.join(output_dir, 'left_img_rectified2.jpg'), left_img_rectified)
-cv2.imwrite(os.path.join(output_dir, 'right_img_rectified2.jpg'), right_img_rectified)
+cv2.imwrite(os.path.join(output_dir, 'left_img_rectified5.jpg'), left_img_rectified)
+cv2.imwrite(os.path.join(output_dir, 'right_img_rectified5.jpg'), right_img_rectified)
 
 # Optionally, display the rectified images
 cv2.imshow('left_img_rectified', left_img_rectified)
 cv2.imshow('right_img_rectified', right_img_rectified)
 cv2.waitKey(0)
 cv2.destroyAllWindows()
+
+# Extract x and y maps
+left_map1_x, left_map1_y = left_map1[:,:,0], left_map1[:,:,1]
+right_map1_x, right_map1_y = right_map1[:,:,0], right_map1[:,:,1]
+
+# Plot rectification maps
+plt.figure(figsize=(10, 8))
+
+plt.subplot(2, 2, 1)
+plt.imshow(left_map1_x, cmap='gray')
+plt.title('Left Map 1 - X coordinates')
+plt.colorbar()
+
+plt.subplot(2, 2, 2)
+plt.imshow(left_map1_y, cmap='gray')
+plt.title('Left Map 1 - Y coordinates')
+plt.colorbar()
+
+plt.subplot(2, 2, 3)
+plt.imshow(right_map1_x, cmap='gray')
+plt.title('Right Map 1 - X coordinates')
+plt.colorbar()
+
+plt.subplot(2, 2, 4)
+plt.imshow(right_map1_y, cmap='gray')
+plt.title('Right Map 1 - Y coordinates')
+plt.colorbar()
+
+plt.tight_layout()
+plt.show()
