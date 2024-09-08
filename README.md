@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # quadruped-robot
 ![quadruped](https://github.com/Hamza47477/Quadruped-robot-inverse-kinematics/blob/main/Robot_hardware.png)
 
@@ -17,3 +18,7 @@ It involves the calibration of stereo camera and finding parameters for rectific
 
 ### Robot Control
 The robot uses an inverse kinematic model to determine how to position the foot in the requested location. Some of the math for this can be seen in the model directory with the jupyter notebook 
+=======
+
+https://github.com/Hamza47477/stereo-vision-obstacle-avoidance-and-navigation/blob/main/results/1.png
+>>>>>>> e3af667e6c61130686331d0f7ef31ed86d8ff406
